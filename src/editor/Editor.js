@@ -1353,6 +1353,7 @@ class Editor extends EditorStartup {
           })
           .then((str) => {
             this.loadSvgString(str, { noAlert })
+            // resolve()
             return str
           })
           .catch((error) => {

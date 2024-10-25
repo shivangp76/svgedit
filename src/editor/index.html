@@ -10,7 +10,7 @@
   <link rel="icon" href="images/logo.svg">
   <!-- STYLESHEETS (others loaded dynamically) -->
   <style id="styleoverrides" media="screen"></style>
-  <link href="./svgedit.css" rel="stylesheet" media="all">
+  <!-- <link href="./svgedit.css" rel="stylesheet" media="all"> -->
   </link>
   <!-- Lacking browser support -->
   <script type="module" src="./browser-not-supported.js"></script>
@@ -20,11 +20,7 @@
 <body style="margin:0">
   <!-- svgedit container can be positionned anywhere in the DOM
        but it must have a width and a height -->
-  <!--
   <h1>SVGEdit</h1>
-  <div id="container" style="width:100%;height:550px"></div>
-  <h1>End</h1>
-  -->
   <div id="container" style="width:100%;height:100vh"></div>
 </body>
 <!-- If you do not wish to add extensions by URL, you can add calls
@@ -37,9 +33,48 @@
     allowInitialUserOverride: true,
     extensions: [],
     noDefaultExtensions: false,
+    no_save_warning: true,
+    initFill: {
+      color: 'FFEBA2' // yellow
+    },
+    initStroke: {
+      color: '000000' // solid black
+    },
+    allowedOrigins: ['*'],
     userExtensions: [/* { pathName: '/packages/react-test/dist/react-test.js' } */]
   })
-  svgEditor.init()
+  const img = new Image()
+  let width = 0;
+  let height = 0;
+  const src = 'background.jpg'
+  img.src = src
+  img.onload = () => {
+    // console.log(`Width: ${img.naturalWidth}, Height: ${img.naturalHeight}`);
+    width = img.naturalWidth
+    height = img.naturalHeight
+    svgEditor.configObj.pref('bkgd_url', src)
+    svgEditor.setConfig({
+        dimensions: [ width, height ]
+    })
+    svgEditor.init().then(() => {
+      console.log('Initialization complete');
+      svgEditor.svgCanvas.renameCurrentLayer("Markup")
+      svgEditor.svgCanvas.createLayer("Clozes")
+      svgEditor.svgCanvas.setCurrentLayer("Clozes")
+
+      let markupGroup = svgEditor.svgCanvas.getCurrentDrawing().layer_map["Markup"].getGroup()
+      markupGroup.setAttribute("id", "markup-group")
+
+      let clozesGroup = svgEditor.svgCanvas.getCurrentDrawing().layer_map["Clozes"].getGroup()
+      clozesGroup.setAttribute("id", "clozes-group")
+    });
+    // console.log(svgEditor.layersPanel)
+    // svgEditor.layersPanel.newLayer("Test")
+    // svgEditor.svgCanvas.updateCanvas(200, 200)
+    // ln -s /Users/shivang/Desktop/image_occlusions/brain.jpg ~/project-archive/svgedit/src/editor/background.jpg
+  }
+
+
   // Variable XDOMAIN below is created by Rollup for the Xdomain build (see rollup.config.js)
   /* globals XDOMAIN */
   try { // try clause to avoid js to complain if XDOMAIN undefined

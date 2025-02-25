@@ -30,7 +30,7 @@ export default {
     await loadExtensionTranslation(svgEditor)
 
     const setup = () => {
-      svgEditor.loadFromString('<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"> <g class="layer" id="markup-group"> <title>Markup</title> </g> <g class="layer" id="clozes-group"> <title>Clozes</title> </g> </svg>')
+      svgEditor.loadFromString('<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"> <g class="layer" id="markup-group"> <title>Markup</title> </g> <g class="layer" id="clozes-group"> <title>Clozes</title> </g> </svg>')
       svgEditor.bottomPanel.changeZoom('canvas');
     }
 
@@ -48,7 +48,7 @@ export default {
           mimeTypes: ['image/*']
         })
         const imageURL = URL.createObjectURL(blob);
-        const title = getFileStem(blob.name) + "-clozes.svg"
+        const title = getFileStem(blob.name) + "_clozes.svg"
         const img = new Image()
         img.src = imageURL
         img.onload = function() {
@@ -74,12 +74,15 @@ export default {
       callback () {
         setup()
 
+        const clozeSettingsDataKey = 'cloze-settings'
+        const clozeSettingsKey = `data-${clozeSettingsDataKey}`
+
         // Add Cloze Settings input
         const element = document.createElement('template')
         const label0 = `${name}:contextTools.0.label`
         const title0 = `${name}:contextTools.0.title`
         element.innerHTML = `
-        <se-input id="elem_cloze_settings" data-attr="cloze-settings" size="10" label="${label0}" title="${title0}"></se-input>`
+        <se-input id="elem_cloze_settings" data-attr="${clozeSettingsDataKey}" size="10" label="${label0}" title="${title0}"></se-input>`
         // const classNames = [
         //   // Rectangle,
         //   "rect_panel",
@@ -100,7 +103,7 @@ export default {
         // }
         $id('editor_panel').appendChild(element.content.cloneNode(true))
         $id('elem_cloze_settings').addEventListener('change', (event) => {
-          svgCanvas.changeSelectedAttribute('data-cloze-settings', event.target.value)
+          svgCanvas.changeSelectedAttribute(clozeSettingsKey, event.target.value)
         })
 
         // Change background image
@@ -128,7 +131,7 @@ export default {
             "path",
           ]
           if (validNodeNames.includes(elem.nodeName)) {
-            const currentClozeSettings = elem.getAttribute("data-cloze-settings") || ""
+            const currentClozeSettings = elem.getAttribute(clozeSettingsKey) || ""
             $id('elem_cloze_settings').value = currentClozeSettings
             showInput(true)
           } else {

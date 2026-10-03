@@ -113,6 +113,8 @@ export class SeMenuItem extends HTMLElement {
         // normalize key
         const key = `${(e.metaKey) ? 'meta+' : ''}${(e.ctrlKey) ? 'ctrl+' : ''}${(e.shiftKey) ? 'shift+' : ''}${e.key.toUpperCase()}`
         if (shortcut !== key) return
+        // A hidden item cannot be clicked, so neither can its shortcut
+        if (getComputedStyle(this).display === 'none') return
         // launch the click event
         if (this.id) {
           document.getElementById(this.id).click()

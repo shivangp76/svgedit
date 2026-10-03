@@ -306,6 +306,13 @@ class Editor extends EditorStartup {
           this.pasteInCenter()
         }
       },
+      // The undo and redo buttons only listen for ctrl, which is not the modifier on macOS
+      ...(isMac()
+        ? [
+            { key: ['meta+z', true], fn: () => { this.topPanel.clickUndo() } },
+            { key: ['shift+meta+z/meta+y', true], fn: () => { this.topPanel.clickRedo() } }
+          ]
+        : []),
       {
         key: 'escape',
         fn: () => {

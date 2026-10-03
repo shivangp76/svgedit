@@ -231,8 +231,11 @@ export class ToolButton extends HTMLElement {
         // only track keyboard shortcuts for the body containing the SVG-Editor
         if (e.target.nodeName !== 'BODY') return
         // normalize key
-        const key = `${(e.metaKey) ? 'meta+' : ''}${(e.ctrlKey) ? 'ctrl+' : ''}${e.key.toUpperCase()}`
-        if (shortcut !== key) return
+        const key = `${(e.metaKey) ? 'meta+' : ''}${(e.ctrlKey) ? 'ctrl+' : ''}${(e.shiftKey) ? 'shift+' : ''}${e.key.toUpperCase()}`
+        // A shortcut can list alternatives, e.g. `Z / Alt + wheels`
+        if (!shortcut.split('/').map((s) => s.trim()).includes(key)) return
+        // A hidden button cannot be clicked, so neither can its shortcut
+        if (getComputedStyle(this).display === 'none') return
         // launch the click event
         this.click()
         e.preventDefault()

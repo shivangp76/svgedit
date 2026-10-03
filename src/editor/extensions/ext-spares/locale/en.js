@@ -9,12 +9,11 @@ export default {
   ],
   contextTools: [
     {
-      title: 'Cloze Settings',
+      title: 'Cloze Settings [Shift+C]',
       label: 'Cloze Settings'
     },
     {
       label: 'Change Background Image'
-      // shortcut: 'N',
     }
   ]
 }

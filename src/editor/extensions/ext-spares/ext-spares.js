@@ -29,6 +29,9 @@ const EMBEDDED_HIDDEN_TOOLS = [
   'tool_editor_homepage'
 ]
 
+// Number keys select layers
+const SHORTCUT_LAYERS = { 1: 'Markup', 2: 'Clozes' }
+
 // Stored on each cloze for the image occlusion parser
 const clozeSettingsDataKey = 'cloze-settings'
 const clozeSettingsKey = `data-${clozeSettingsDataKey}`
@@ -79,6 +82,8 @@ export default {
       await svgEditor.loadFromString(TEMPLATE)
       selectClozesLayer()
       svgEditor.bottomPanel.changeZoom('canvas')
+      // Undoing the template would remove the layers the parser looks for
+      svgCanvas.undoMgr.resetUndoStack()
     }
 
     const setBackgroundImage = (imageURL, width, height, title) => {
@@ -177,10 +182,32 @@ export default {
         $id('elem_cloze_settings').addEventListener('change', (event) => {
           svgCanvas.changeSelectedAttribute(clozeSettingsKey, event.target.value)
         })
+        // Hand the keyboard back to the editor's shortcuts. Blurring commits the value.
+        $id('elem_cloze_settings').addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === 'Escape') document.activeElement.blur()
+        })
+        document.addEventListener('keydown', (event) => {
+          // Like the editor's shortcuts, ignore keys typed into inputs
+          if (event.target.nodeName !== 'BODY' || event.metaKey || event.ctrlKey || event.altKey) return
+          const layer = SHORTCUT_LAYERS[event.key]
+          if (layer && !event.shiftKey) {
+            svgCanvas.clearSelection()
+            svgCanvas.setCurrentLayer(layer)
+            svgEditor.layersPanel.populateLayers()
+          } else if (event.key === 'C' && event.shiftKey) {
+            const input = $id('elem_cloze_settings')
+            if (input.style.display === 'none') return
+            input.$input.focus()
+          } else {
+            return
+          }
+          event.preventDefault()
+        })
 
         // Change background image
         const label1 = `${name}:contextTools.1.label`
-        const shortcut1 = 'B'
+        // `B` is bold
+        const shortcut1 = 'shift+B'
         const buttonTemplate = `
         <se-menu-item id="tool_change_background" label="${label1}" shortcut="${shortcut1}" src="new.svg"></se-menu-item>`
         svgCanvas.insertChildAtIndex($id('main_button'), buttonTemplate, 0)

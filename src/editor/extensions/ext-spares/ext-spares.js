@@ -1,0 +1,225 @@
+/**
+ * @file ext-spares.js
+ *
+ * @license MIT
+ *
+ *
+ */
+import { fileOpen } from 'browser-fs-access'
+
+const name = 'spares'
+
+// The spares frontend embeds the editor in an iframe with `?embedded=1`. It then provides the
+// image and SVG, and saves them to the server, through `window.sparesBridge`.
+const urlParams = new URLSearchParams(window.location.search)
+const embedded = urlParams.get('embedded') === '1'
+
+// Kept in sync with `spares_core/src/parsers/image_occlusion/template.svg`. The embedded editor is
+// given the server's copy instead.
+const TEMPLATE = '<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"> <g class="layer" id="markup-group"> <title>Markup</title> </g> <g class="layer" id="clozes-group"> <title>Clozes</title> </g> </svg>'
+
+// Menu items that would replace the image occlusion or save it somewhere spares cannot see
+const EMBEDDED_HIDDEN_TOOLS = [
+  'tool_clear',
+  'tool_open',
+  'tool_save',
+  'tool_save_as',
+  'tool_change_background',
+  'tool_docprops',
+  'tool_editor_homepage'
+]
+
+// Stored on each cloze for the image occlusion parser
+const clozeSettingsDataKey = 'cloze-settings'
+const clozeSettingsKey = `data-${clozeSettingsDataKey}`
+
+const loadExtensionTranslation = async function (svgEditor) {
+  let translationModule
+  const lang = svgEditor.configObj.pref('lang')
+  try {
+    translationModule = await import(`./locale/${lang}.js`)
+  } catch (_error) {
+    console.warn(`Missing translation (${lang}) for ${name} - using 'en'`)
+    translationModule = await import('./locale/en.js')
+  }
+  svgEditor.i18next.addResourceBundle(lang, name, translationModule.default)
+}
+
+/** Resolves with the element with `id` once it is in the document. */
+const whenElement = (id) => new Promise((resolve) => {
+  const find = () => document.getElementById(id)
+  const element = find()
+  if (element) return resolve(element)
+  const observer = new MutationObserver(() => {
+    const found = find()
+    if (found) {
+      observer.disconnect()
+      resolve(found)
+    }
+  })
+  observer.observe(document.body, { childList: true, subtree: true })
+})
+
+export default {
+  name,
+  async init (_S) {
+    const svgEditor = this
+    const { svgCanvas } = svgEditor
+    const { $id, $click } = svgCanvas
+    await loadExtensionTranslation(svgEditor)
+
+    // Shapes drawn after loading should be clozes. Loading a string does not refresh the layers
+    // panel, so it is repopulated.
+    const selectClozesLayer = () => {
+      svgCanvas.setCurrentLayer('Clozes')
+      svgEditor.layersPanel.populateLayers()
+    }
+
+    const setup = async () => {
+      await svgEditor.loadFromString(TEMPLATE)
+      selectClozesLayer()
+      svgEditor.bottomPanel.changeZoom('canvas')
+    }
+
+    const setBackgroundImage = (imageURL, width, height, title) => {
+      svgCanvas.setBackground('#000', imageURL)
+      svgEditor.svgCanvas.setResolution(width, height)
+      svgEditor.bottomPanel.changeZoom('canvas')
+      if (title) svgEditor.topPanel.updateTitle(title)
+    }
+
+    let resolveReady
+    const ready = new Promise((resolve) => { resolveReady = resolve })
+    if (embedded) {
+      window.sparesBridge = {
+        ready,
+        /**
+         * Shows `imageUrl` behind the clozes in `svg`. The canvas takes the image's size, which
+         * the parser expects of the clozes file.
+         */
+        async load ({ imageUrl, width, height, svg, title }) {
+          await svgEditor.loadFromString(svg || TEMPLATE, { noAlert: true })
+          selectClozesLayer()
+          setBackgroundImage(imageUrl, width, height, title)
+          // Loading is not an edit the user would want to undo or be warned about
+          svgCanvas.undoMgr.resetUndoStack()
+        },
+        getClozesSvg () {
+          svgCanvas.clearSelection()
+          return svgCanvas.getSvgString()
+        },
+        isDirty () {
+          return svgCanvas.undoMgr.getUndoStackSize() > 0
+        }
+      }
+    }
+
+    const getFileStem = (filepath) => {
+      return filepath.split('/').pop().split('.').slice(0, -1).join('.')
+    }
+
+    const showInput = (on) => {
+      $id('elem_cloze_settings').style.display = (on) ? 'block' : 'none'
+    }
+
+    const clickOpen = async function () {
+      try {
+        const blob = await fileOpen({
+          mimeTypes: ['image/*']
+        })
+        const imageURL = URL.createObjectURL(blob)
+        const title = getFileStem(blob.name) + '_clozes.svg'
+        const img = new Image()
+        img.src = imageURL
+        img.onload = function () {
+          setBackgroundImage(imageURL, img.naturalWidth, img.naturalHeight, title)
+          // Clean up the URL
+          URL.revokeObjectURL(imageURL)
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          return console.error(err)
+        }
+      }
+    }
+
+    return {
+      name: svgEditor.i18next.t(`${name}:name`),
+      // The callback should be used to load the DOM with the appropriate UI items
+      callback () {
+        setup()
+
+        // Add Cloze Settings input
+        const element = document.createElement('template')
+        const label0 = `${name}:contextTools.0.label`
+        const title0 = `${name}:contextTools.0.title`
+        element.innerHTML = `
+        <se-input id="elem_cloze_settings" data-attr="${clozeSettingsDataKey}" size="10" label="${label0}" title="${title0}"></se-input>`
+        // const classNames = [
+        //   // Rectangle,
+        //   "rect_panel",
+        //   // Circle,
+        //   "circle_panel",
+        //   // Ellipse,
+        //   "ellipse_panel",
+        //   // Line,
+        //   // "line_panel",
+        //   // Polyline,
+        //   // Polygon,
+        //   "polygon_panel",
+        //   // Path,
+        //   // "path_node_panel", // This is for an edge within a path
+        // ]
+        // for (const className of classNames) {
+        //   $qa(`.${className}`).forEach(el => el.appendChild(element.content.cloneNode(true)))
+        // }
+        $id('editor_panel').appendChild(element.content.cloneNode(true))
+        $id('elem_cloze_settings').addEventListener('change', (event) => {
+          svgCanvas.changeSelectedAttribute(clozeSettingsKey, event.target.value)
+        })
+
+        // Change background image
+        const label1 = `${name}:contextTools.1.label`
+        const shortcut1 = 'B'
+        const buttonTemplate = `
+        <se-menu-item id="tool_change_background" label="${label1}" shortcut="${shortcut1}" src="new.svg"></se-menu-item>`
+        svgCanvas.insertChildAtIndex($id('main_button'), buttonTemplate, 0)
+        $click($id('tool_change_background'), clickOpen.bind(this))
+
+        // Change clozes file. Extensions load in parallel, so ext-opensave may not have added it yet.
+        whenElement('tool_open').then((toolOpen) => { toolOpen.label = 'Open Clozes SVG' })
+
+        if (embedded) {
+          // A stylesheet also hides tools other extensions have not added yet
+          const style = document.createElement('style')
+          style.textContent = `${EMBEDDED_HIDDEN_TOOLS.map((id) => `#${id}`).join(', ')} { display: none !important; }`
+          document.head.appendChild(style)
+          resolveReady()
+          window.parent.postMessage({ type: 'spares:ready' }, window.location.origin)
+        }
+      },
+      selectedChanged (opts) {
+        const { elems: selElems } = opts
+        if (selElems.length === 0 && $id('elem_cloze_settings') != null) {
+          showInput(false)
+        }
+        for (const elem of selElems) {
+          const validNodeNames = [
+            'rect',
+            'circle',
+            'ellipse',
+            'polygon',
+            'path'
+          ]
+          if (elem && validNodeNames.includes(elem.nodeName)) {
+            const currentClozeSettings = elem.getAttribute(clozeSettingsKey) || ''
+            $id('elem_cloze_settings').value = currentClozeSettings
+            showInput(true)
+          } else {
+            showInput(false)
+          }
+        }
+      }
+    }
+  }
+}

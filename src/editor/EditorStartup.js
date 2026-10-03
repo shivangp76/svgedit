@@ -673,8 +673,12 @@ class EditorStartup {
             /**
              * @type {module:SVGthis.ExtensionObject}
              */
-            // Vite cannot statically analyze these dynamic extension imports.
-            const imported = await import(/* @vite-ignore */ `${this.configObj.curConfig.extPath}/${encodeURIComponent(extname)}/${encodeURIComponent(extname)}.js`)
+            const extPath = this.configObj.curConfig.extPath
+            // A literal path for the default lets bundlers such as Vite find and bundle the
+            // extensions, which a path only known at runtime does not
+            const imported = extPath === this.configObj.defaultConfig.extPath
+              ? await import(`./extensions/${encodeURIComponent(extname)}/${encodeURIComponent(extname)}.js`)
+              : await import(/* @vite-ignore */ `${extPath}/${encodeURIComponent(extname)}/${encodeURIComponent(extname)}.js`)
             const { name = extname, init: initfn } = imported.default
             return this.addExtension(name, (initfn && initfn.bind(this)), { langParam: 'en' }) /** @todo  change to current lng */
           } catch (err) {

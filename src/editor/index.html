@@ -32,13 +32,74 @@
   import Editor from './Editor.js'
   /* for available options see the file `docs/tutorials/ConfigOptions.md */
   const svgEditor = new Editor(document.getElementById('container'))
+  const extensions = [
+    'ext-connector',
+    'ext-eyedropper',
+    'ext-grid',
+    'ext-markers',
+    'ext-panning',
+    'ext-shapes',
+    'ext-polystar',
+    'ext-storage',
+    'ext-opensave',
+    'ext-layer_view'
+  ]
+  const otherExtensions = [
+    // "ext-codemirror",
+    // 'ext-helloworld',
+    'ext-spares',
+    // 'ext-xdomain-messaging',
+  ]
+  extensions.push(...otherExtensions);
+  // Embedded in the spares frontend, the image occlusion is saved to the server. Storing it in the
+  // browser too would share the frontend's storage and prompt on every open.
+  if (new URLSearchParams(window.location.search).get('embedded') === '1') {
+    extensions.splice(extensions.indexOf('ext-storage'), 1)
+  }
+
+  // This is set in spares
+  // const question_mask_fill_color = "FF7E7E"
+  const other_mask_fill_color = "FFEBA2" // yellow
+  const line_width = 1
+  const line_color = "000000" // solid black
+  const font_size = 16
+  const font_family = "Sans-serif"
   svgEditor.setConfig({
     allowInitialUserOverride: true,
-    extensions: [],
-    noDefaultExtensions: false,
-    userExtensions: [/* { pathName: '/packages/react-test/dist/react-test.js' } */]
+    noDefaultExtensions: true,
+    no_save_warning: true,
+    initFill: {
+      color: other_mask_fill_color,
+    },
+    initStroke: {
+      width: line_width,
+      color: line_color,
+    },
+    text: {
+      stroke_width: 0,
+      font_size: font_size,
+      font_family: font_family,
+    },
+    initTool: 'rect',
+    allowedOrigins: ['null'],
+    showlayers: true,
+    // canvasName: "default",
+    noStorageOnLoad: true,
+    // dynamicOutput: false,
+    // userExtensions: [/* { pathName: '/packages/react-test/dist/react-test.js' } */]
+    extensions: extensions,
   })
   svgEditor.init()
+  // svgEditor.svgCanvas.renameCurrentLayer("Markup")
+  // svgEditor.svgCanvas.createLayer("Clozes")
+  // svgEditor.svgCanvas.setCurrentLayer("Clozes")
+  //
+  // let markupGroup = svgEditor.svgCanvas.getCurrentDrawing().layer_map["Markup"].getGroup()
+  // markupGroup.setAttribute("id", "markup-group")
+  //
+  // let clozesGroup = svgEditor.svgCanvas.getCurrentDrawing().layer_map["Clozes"].getGroup()
+  // clozesGroup.setAttribute("id", "clozes-group")
+
   if (typeof XDOMAIN !== 'undefined' && XDOMAIN) {
     svgEditor.setConfig({
       canvasName: 'xdomain', // Namespace this

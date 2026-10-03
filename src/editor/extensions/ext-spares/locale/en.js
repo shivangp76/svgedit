@@ -14,6 +14,9 @@ export default {
     },
     {
       label: 'Change Background Image'
+    },
+    {
+      label: 'Keyboard Shortcuts'
     }
   ]
 }

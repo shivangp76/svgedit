@@ -7,6 +7,7 @@
  */
 import { fileOpen } from 'browser-fs-access'
 import { STANDALONE_CONFIG_PATH, sparesConfig } from './config.js'
+import { createShortcutsDialog } from './shortcuts.js'
 
 const name = 'spares'
 
@@ -230,6 +231,13 @@ export default {
         <se-menu-item id="tool_change_background" label="${label1}" shortcut="${shortcut1}" src="new.svg"></se-menu-item>`
         svgCanvas.insertChildAtIndex($id('main_button'), buttonTemplate, 0)
         $click($id('tool_change_background'), clickOpen.bind(this))
+
+        // Keyboard shortcuts popup, last in the main menu
+        const label2 = `${name}:contextTools.2.label`
+        const shortcutsTemplate = `
+        <se-menu-item id="tool_spares_shortcuts" label="${label2}" shortcut="shift+?" src="context_menu.svg"></se-menu-item>`
+        svgCanvas.insertChildAtIndex($id('main_button'), shortcutsTemplate, Infinity)
+        $click($id('tool_spares_shortcuts'), createShortcutsDialog(embedded))
 
         // Change clozes file. Extensions load in parallel, so ext-opensave may not have added it yet.
         whenElement('tool_open').then((toolOpen) => { toolOpen.label = 'Open Clozes SVG' })

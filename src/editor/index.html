@@ -30,6 +30,7 @@
       within the following file to svgEditor.setConfig -->
 <script type="module">
   import Editor from './Editor.js'
+  import { sparesConfig } from './extensions/ext-spares/config.js'
   /* for available options see the file `docs/tutorials/ConfigOptions.md */
   const svgEditor = new Editor(document.getElementById('container'))
   const extensions = [
@@ -57,30 +58,25 @@
     extensions.splice(extensions.indexOf('ext-storage'), 1)
   }
 
-  // This is set in spares
-  // const question_mask_fill_color = "FF7E7E"
-  const other_mask_fill_color = "FFEBA2" // yellow
-  const line_width = 1
-  const line_color = "000000" // solid black
-  const font_size = 16
-  const font_family = "Sans-serif"
+  // From the user's spares config. The fallbacks are the defaults of `ImageOcclusionConfig`.
+  const hex = (color, fallback) => (color ?? fallback).replace(/^#/, '')
   svgEditor.setConfig({
     allowInitialUserOverride: true,
     noDefaultExtensions: true,
     no_save_warning: true,
     initFill: {
-      color: other_mask_fill_color,
+      color: hex(sparesConfig.fill_color, 'FFEBA2'),
     },
     initStroke: {
-      width: line_width,
-      color: line_color,
+      width: sparesConfig.stroke_width ?? 1,
+      color: hex(sparesConfig.stroke_color, '000000'),
     },
     text: {
       stroke_width: 0,
-      font_size: font_size,
-      font_family: font_family,
+      font_size: sparesConfig.font_size ?? 16,
+      font_family: sparesConfig.font_family ?? 'Sans-serif',
     },
-    initTool: 'rect',
+    initTool: sparesConfig.initial_tool ?? 'rect',
     allowedOrigins: ['null'],
     showlayers: true,
     // canvasName: "default",

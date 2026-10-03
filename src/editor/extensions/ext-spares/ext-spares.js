@@ -6,6 +6,7 @@
  *
  */
 import { fileOpen } from 'browser-fs-access'
+import { STANDALONE_CONFIG_PATH, sparesConfig } from './config.js'
 
 const name = 'spares'
 
@@ -13,10 +14,6 @@ const name = 'spares'
 // image and SVG, and saves them to the server, through `window.sparesBridge`.
 const urlParams = new URLSearchParams(window.location.search)
 const embedded = urlParams.get('embedded') === '1'
-
-// Kept in sync with `spares_core/src/parsers/image_occlusion/template.svg`. The embedded editor is
-// given the server's copy instead.
-const TEMPLATE = '<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"> <g class="layer" id="markup-group"> <title>Markup</title> </g> <g class="layer" id="clozes-group"> <title>Clozes</title> </g> </svg>'
 
 // Menu items that would replace the image occlusion or save it somewhere spares cannot see
 const EMBEDDED_HIDDEN_TOOLS = [
@@ -79,7 +76,11 @@ export default {
     }
 
     const setup = async () => {
-      await svgEditor.loadFromString(TEMPLATE)
+      if (!sparesConfig.template) {
+        alert(`The image occlusion template could not be loaded from ${STANDALONE_CONFIG_PATH}. Start the editor with \`spares_frontend --image-occlusion\`.`)
+        return
+      }
+      await svgEditor.loadFromString(sparesConfig.template)
       selectClozesLayer()
       svgEditor.bottomPanel.changeZoom('canvas')
       // Undoing the template would remove the layers the parser looks for
@@ -99,11 +100,12 @@ export default {
       window.sparesBridge = {
         ready,
         /**
-         * Shows `imageUrl` behind the clozes in `svg`. The canvas takes the image's size, which
-         * the parser expects of the clozes file.
+         * Shows `imageUrl` behind the clozes in `svg`, or the template for a new image
+         * occlusion. The canvas takes the image's size, which the parser expects of the clozes
+         * file.
          */
         async load ({ imageUrl, width, height, svg, title }) {
-          await svgEditor.loadFromString(svg || TEMPLATE, { noAlert: true })
+          await svgEditor.loadFromString(svg ?? sparesConfig.template, { noAlert: true })
           selectClozesLayer()
           setBackgroundImage(imageUrl, width, height, title)
           // Loading is not an edit the user would want to undo or be warned about

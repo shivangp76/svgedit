@@ -85,6 +85,16 @@ export default {
       svgEditor.bottomPanel.changeZoom('canvas')
       // Undoing the template would remove the layers the parser looks for
       svgCanvas.undoMgr.resetUndoStack()
+      // Given by `spares_frontend --image-occlusion --image <PATH>`
+      const { background } = sparesConfig
+      if (background && !embedded) {
+        try {
+          await loadBackgroundImage(background.url, background.name)
+          svgCanvas.undoMgr.resetUndoStack()
+        } catch (error) {
+          alert(error.message)
+        }
+      }
     }
 
     const setBackgroundImage = (imageURL, width, height, title) => {
@@ -129,20 +139,26 @@ export default {
       $id('elem_cloze_settings').style.display = (on) ? 'block' : 'none'
     }
 
+    /** Shows the image at `imageURL` behind the clozes, and names them after `fileName`. */
+    const loadBackgroundImage = (imageURL, fileName) => new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        setBackgroundImage(imageURL, img.naturalWidth, img.naturalHeight, getFileStem(fileName) + '_clozes.svg')
+        resolve()
+      }
+      img.onerror = () => reject(new Error(`Failed to load the image ${fileName}`))
+      img.src = imageURL
+    })
+
     const clickOpen = async function () {
       try {
         const blob = await fileOpen({
           mimeTypes: ['image/*']
         })
         const imageURL = URL.createObjectURL(blob)
-        const title = getFileStem(blob.name) + '_clozes.svg'
-        const img = new Image()
-        img.src = imageURL
-        img.onload = function () {
-          setBackgroundImage(imageURL, img.naturalWidth, img.naturalHeight, title)
-          // Clean up the URL
-          URL.revokeObjectURL(imageURL)
-        }
+        await loadBackgroundImage(imageURL, blob.name)
+        // Clean up the URL
+        URL.revokeObjectURL(imageURL)
       } catch (err) {
         if (err.name !== 'AbortError') {
           return console.error(err)

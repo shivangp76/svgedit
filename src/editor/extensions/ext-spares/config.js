@@ -4,7 +4,8 @@
  * @license MIT
  *
  * The template and the user's editor settings from spares, shaped like
- * `spares_core::api::image_occlusion::ImageOcclusionEditorConfig`.
+ * `spares_core::api::image_occlusion::ImageOcclusionEditorConfig`. The standalone editor may also be
+ * given a `background` (`{ url, name }`) to open.
  *
  * The spares frontend passes it in the `config` URL parameter. The standalone editor fetches it
  * from the dev server, which `spares_frontend --image-occlusion` gives it to. Missing settings
